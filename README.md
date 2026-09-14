@@ -1,65 +1,52 @@
-# SpringBoot 项目
+# AI 题境 —— AI 智能刷题平台
 
-基于 Java SpringBoot 的项目初始模板，整合了常用框架和主流业务的代码。
+基于 Spring Boot 的 AI 刷题平台，支持 **AI 生成题目与解答**、题库管理、分词检索、在线刷题与刷题记录查看，并集成多层性能优化与安全防护方案。
 
-## 模板特点
+## ✨ 核心亮点
 
-### 主流框架 & 特性
+### 1. AI 生成题目链路优化
+- 接入火山方舟（DeepSeek V3）实现 AI 自动生成题目与解答
+- 基于 MyBatis Plus batch 分批插入 + 线程池隔离 + `CompletableFuture` 异步编排，AI 生成 10 道题目并入库的耗时降低约 1 倍
 
-- Spring Boot 2.7.x（贼新）
-- Spring MVC
-- MyBatis + MyBatis Plus 数据访问（开启分页）
-- Spring Boot 调试工具和项目处理器
-- Spring AOP 切面编程
-- Spring Scheduler 定时任务
-- Spring 事务注解
+### 2. 高性能设计
+- **Redis BitMap** 实现用户年度刷题记录，相比数据库行式存储节省数百倍空间
+- 本地缓存 + 位运算优化，减少网络请求与接口传输体积
+- **Elasticsearch** 替代 MySQL 模糊查询，IK 分词器 + 自定义词典实现灵活检索，并实现 ES 故障降级策略（宕机时回落数据库/缓存）
+- 京东 **HotKey** 热点探测，自动发现并本地缓存热点题目
 
-### 数据存储
-- MySQL 数据库
-- Redis 内存数据库
-- Elasticsearch 搜索引擎
-- 腾讯云 COS 对象存储
-### 工具类
-- Easy Excel 表格处理
-- Hutool 工具库
-- Apache Commons Lang3 工具类
-- Lombok 注解
+### 3. 高可用与流控
+- **Sentinel** 热点参数限流（单 IP 题目获取流控）+ 熔断降级（题库列表接口熔断时返回本地缓存），规则通过 Push 模式持久化
+- 增量/全量定时任务同步 MySQL 与 Elasticsearch 数据
 
-### 业务特性
+### 4. 安全防护
+- **Sa-Token** 同端登录冲突检测：懒惰式策略通知多端登录，避免轮询压力
+- 分级反爬虫：滑动窗口频率统计 + Redis + Lua 脚本保证原子性，超限自动告警与封禁
+- **WebFilter + BloomFilter** IP 黑名单拦截，结合 Nacos 配置中心动态更新
+- 自定义注解封装 HotKey 探测、分布式锁、反爬校验，消除冗余代码
 
-- 业务代码生成器（支持自动生成 Service、Controller、数据模型代码）
-- Spring Session Redis 分布式登录
-- 全局请求响应拦截器（记录日志）
-- 全局异常处理器
-- 自定义错误码
-- 封装通用响应类
-- Swagger + Knife4j 接口文档
-- 自定义权限注解 + 全局校验
-- 全局跨域处理
-- 长整数丢失精度解决
-- 多环境配置
+## 🛠 技术栈
 
+Spring Boot 2.7 / MyBatis Plus / MySQL / Redis + Redisson / Elasticsearch / Sentinel / Nacos / HotKey / Sa-Token / 火山方舟（DeepSeek V3）/ 腾讯云 COS / Knife4j
 
-## 业务功能
-- 用户登录、注册、注销、更新、检索、权限管理
-- 帖子创建、删除、编辑、更新、数据库检索、ES 灵活检索
-- 帖子点赞、取消点赞
-- 帖子收藏、取消收藏、检索已收藏帖子
-- 帖子全量同步 ES、增量同步 ES 定时任务
-- 支持微信开放平台登录
-- 支持微信公众号订阅、收发消息、设置菜单
-- 支持分业务的文件上传
+## 🚀 快速启动
 
-### 单元测试
+```bash
+# 1. 准备 MySQL / Redis / Elasticsearch / Nacos 环境
+# 2. 在 application-local.yml 中配置 AI apikey 等本地凭证（不入库）
+# 3. 启动
+mvn spring-boot:run
+```
 
-- JUnit5 单元测试
-- 示例单元测试类
+## 📂 模块结构
 
-
-2）执行 `sql/create_table.sql` 中的数据库语句，自动创建库表
-
-3）启动项目，访问 `http://localhost:8101/api/doc.html` 即可打开接口文档，不需要写前端就能在线调试接口了~
-
-![](doc/swagger.png)
-
-### Redis 分布式登录
+```
+src/main/java/com/xiaochen
+├── aop/           # 权限 / 反爬 / 分布式锁 / 热点探测拦截器
+├── blackfilter/   # IP 黑名单过滤器（Nacos 动态规则）
+├── controller/    # 用户 / 题目 / 题库 / 点赞收藏 / 微信公众号
+├── esdao/         # ES 数据访问层
+├── job/cycle/     # 增量数据同步任务
+├── manager/       # AI 调用管理器（AiManager）
+├── sentinel/      # 限流熔断规则管理
+└── ThreadPool/    # 线程池隔离（AI / 数据库）
+```
